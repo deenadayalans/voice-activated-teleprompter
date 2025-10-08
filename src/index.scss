@@ -18,6 +18,29 @@ body {
   flex-direction: column;
 }
 
+.app-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.side-panel {
+  width: 300px;
+  background-color: $grey-darker;
+  border-right: 1px solid $grey-dark;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.main-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content.with-panel {
+  margin-left: 0;
+}
+
 /* Layout */
 
 .navbar {
@@ -144,4 +167,120 @@ div.content {
 
 .content > span:hover {
   color: $red !important;
+}
+
+/* Script Manager styles */
+
+.script-manager-toggle {
+  margin-right: 0.5rem;
+}
+
+.script-manager-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: $grey-darker;
+  color: $white;
+}
+
+.script-manager-header {
+  padding: 1rem;
+  border-bottom: 1px solid $grey-dark;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: $black;
+}
+
+.script-manager-header .title {
+  margin: 0;
+  color: $white;
+}
+
+.script-manager-content {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.file-upload-section {
+  margin-bottom: 1rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.file-cta {
+  background-color: $primary;
+  border-color: $primary;
+  color: $white;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.file-cta:hover {
+  background-color: $primary-dark;
+}
+
+.file-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scripts-list {
+  margin-top: 1rem;
+}
+
+.script-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background-color: $grey-dark;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border: 1px solid transparent;
+}
+
+.script-item:hover {
+  background-color: $grey;
+}
+
+.script-item.is-active {
+  background-color: $primary;
+  border-color: $primary-light;
+}
+
+.script-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.script-name {
+  font-weight: 500;
+  color: $white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.script-meta {
+  margin-top: 0.25rem;
+}
+
+.script-item .delete {
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.notification {
+  margin-bottom: 1rem;
 }
