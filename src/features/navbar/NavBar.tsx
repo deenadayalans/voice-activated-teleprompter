@@ -23,6 +23,7 @@ import {
 } from "./navbarSlice"
 
 import { resetTranscriptionIndices } from "../content/contentSlice"
+import { ScriptManager } from "../script-manager/ScriptManager"
 
 export const NavBar = () => {
   const dispatch = useAppDispatch()
@@ -152,6 +153,7 @@ export const NavBar = () => {
           ) : null}
 
           <div className="buttons navbar-item">
+            <ScriptManager />
             {status !== "started" ? (
               <>
                 <button
