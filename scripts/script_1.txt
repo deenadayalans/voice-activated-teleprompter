@@ -1,0 +1,12 @@
+Welcome to the Voice-Activated Teleprompter!
+
+This is your first script. You can:
+
+1. Edit this content directly
+2. Create new scripts using the script manager
+3. Import .txt files from your computer
+4. Export scripts as .txt files
+
+The teleprompter will automatically scroll as you read, following your voice recognition.
+
+Happy teleprompting!

@@ -146,7 +146,42 @@ input[type="range"] {
   height: 100%;
   color: $white;
   padding: 0;
-  line-height: inherit;
+  line-height: 1.4; /* Optimized for 6-line display */
+  font-weight: 400; /* Clean, readable font weight */
+}
+
+/* Reading marker - positioned on second line of 6 */
+.reading-marker {
+  position: absolute;
+  top: 25%; /* Positioned for second line of 6 lines */
+  left: 0;
+  right: 0;
+  height: 125px; /* Covers line height for 100px font */
+  z-index: 1000;
+  pointer-events: none;
+  
+  /* Arrow pointing from left to active line - responsive to sidebar */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 20px; /* Default position when sidebar is closed */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 25px solid transparent;
+    border-bottom: 25px solid transparent;
+    border-left: 40px solid #ffdd57; /* Bigger bright yellow arrow */
+    filter: drop-shadow(0 0 12px rgba(255, 221, 87, 0.8));
+    transition: left 0.3s ease; /* Smooth transition when sidebar toggles */
+  }
+}
+
+/* When sidebar is open, move arrow further right */
+.main-content.with-panel .reading-marker {
+  &::before {
+    left: 280px; /* Moved even further right when sidebar is open */
+  }
 }
 
 .content:focus {
@@ -167,6 +202,20 @@ div.content {
 
 .content > span:hover {
   color: $red !important;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.content > span {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.content > span:active {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.02);
 }
 
 /* Script Manager styles */

@@ -6,7 +6,6 @@ import {
   toggleEdit,
   flipHorizontally,
   flipVertically,
-  setFontSize,
   setMargin,
   setOpacity,
   setScrollOffset,
@@ -14,7 +13,6 @@ import {
   selectStatus,
   selectHorizontallyFlipped,
   selectVerticallyFlipped,
-  selectFontSize,
   selectMargin,
   selectOpacity,
   selectScrollOffset,
@@ -29,7 +27,6 @@ export const NavBar = () => {
   const dispatch = useAppDispatch()
 
   const status = useAppSelector(selectStatus)
-  const fontSize = useAppSelector(selectFontSize)
   const margin = useAppSelector(selectMargin)
   const opacity = useAppSelector(selectOpacity)
   const scrollOffset = useAppSelector(selectScrollOffset)
@@ -97,19 +94,6 @@ export const NavBar = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="navbar-item slider">
-                <span>Font size:</span>
-                <input
-                  type="range"
-                  step="5"
-                  min="10"
-                  max="200"
-                  value={fontSize}
-                  onChange={e =>
-                    dispatch(setFontSize(parseInt(e.currentTarget.value, 10)))
-                  }
-                />
               </div>
               <div className="navbar-item slider">
                 <span>Margin:</span>
