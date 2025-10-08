@@ -23,7 +23,7 @@ import {
 } from "./navbarSlice"
 
 import { resetTranscriptionIndices } from "../content/contentSlice"
-import { ScriptManager } from "../script-manager/ScriptManager"
+import { selectIsPanelOpen, setPanelOpen } from "../script-manager/scriptManagerSlice"
 
 export const NavBar = () => {
   const dispatch = useAppDispatch()
@@ -36,6 +36,7 @@ export const NavBar = () => {
   const horizontallyFlipped = useAppSelector(selectHorizontallyFlipped)
   const verticallyFlipped = useAppSelector(selectVerticallyFlipped)
   const language = useAppSelector(selectLanguage)
+  const isPanelOpen = useAppSelector(selectIsPanelOpen)
 
   return (
     <nav
@@ -153,7 +154,16 @@ export const NavBar = () => {
           ) : null}
 
           <div className="buttons navbar-item">
-            <ScriptManager />
+            <button
+              className="button is-primary is-small script-manager-toggle"
+              onClick={() => dispatch(setPanelOpen(!isPanelOpen))}
+              title="Open Script Manager"
+            >
+              <span className="icon is-small">
+                <i className="fa-solid fa-folder-open" />
+              </span>
+              <span>Scripts</span>
+            </button>
             {status !== "started" ? (
               <>
                 <button
