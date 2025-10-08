@@ -13,6 +13,7 @@ import {
   setLoading,
   setError,
   clearError,
+  type Script,
 } from "./scriptManagerSlice"
 import { setContent } from "../content/contentSlice"
 
@@ -34,6 +35,8 @@ export const ScriptManager = () => {
     dispatch(clearError())
 
     try {
+      const uploadedScripts: Script[] = []
+      
       for (const file of Array.from(files)) {
         if (file.type === "text/plain" || file.name.endsWith('.txt')) {
           const content = await file.text()
@@ -41,11 +44,19 @@ export const ScriptManager = () => {
             id: `script-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             name: file.name.replace('.txt', ''),
             content,
-            lastModified: new Date(file.lastModified),
+            lastModified: file.lastModified, // Store as timestamp
             filePath: file.name,
           }
           dispatch(addScript(script))
+          uploadedScripts.push(script)
         }
+      }
+      
+      // Automatically load the first uploaded script
+      if (uploadedScripts.length > 0) {
+        const firstScript = uploadedScripts[0]
+        dispatch(selectScript(firstScript.id))
+        dispatch(setContent(firstScript.content))
       }
     } catch (err) {
       dispatch(setError("Failed to load script files"))
@@ -156,7 +167,7 @@ export const ScriptManager = () => {
                   <div className="script-name">{script.name}</div>
                   <div className="script-meta">
                     <small className="has-text-grey">
-                      {script.lastModified.toLocaleDateString()}
+                      {new Date(script.lastModified).toLocaleDateString()}
                     </small>
                   </div>
                 </div>

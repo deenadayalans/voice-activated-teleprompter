@@ -5,7 +5,7 @@ export interface Script {
   id: string
   name: string
   content: string
-  lastModified: Date
+  lastModified: number // Store as timestamp instead of Date object
   filePath?: string
 }
 
