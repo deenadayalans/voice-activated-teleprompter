@@ -9,12 +9,14 @@ import { computeSpeechRecognitionTokenIndex } from "../lib/speech-matcher"
 
 let speechRecognizer: SpeechRecognizer | null = null
 
-export const startTeleprompter = (): AppThunk => (dispatch, getState) => {
+export const startTeleprompter = (): AppThunk => async (dispatch, getState) => {
   try {
     dispatch(start())
 
     const { language } = getState().navbar
+    console.log('Creating SpeechRecognizer with language:', language)
     speechRecognizer = new SpeechRecognizer(language)
+    console.log('SpeechRecognizer created:', speechRecognizer)
 
     // Add error handling for critical errors only
     speechRecognizer.onerror((error: string, errorCode: string) => {
@@ -56,7 +58,9 @@ export const startTeleprompter = (): AppThunk => (dispatch, getState) => {
       },
     )
 
-    speechRecognizer.start()
+    console.log('Starting speech recognizer...')
+    await speechRecognizer.start()
+    console.log('Speech recognizer started successfully')
   } catch (error) {
     console.error("Failed to start teleprompter:", error)
     dispatch(stop())

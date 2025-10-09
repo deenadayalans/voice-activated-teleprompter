@@ -1,14 +1,89 @@
 import { type TextElement, tokenize } from "./word-tokenizer"
 import { levenshteinDistance } from "./levenshtein"
 
-// Enhanced speech matching algorithm with 2-3 word phrase matching for error-proof recognition
-// This prevents false matches from single words that repeat throughout the script
-// For small words like "to", "the", "and", requires 3-word matching for better accuracy
+// Configurable speech matching algorithms
+export interface MatchingConfig {
+  algorithm: 'conservative' | 'fourWord' | 'balanced' | 'aggressive' | 'custom'
+  minWords: number
+  maxWords: number
+  allowSingleWords: boolean
+  smallWordsRequireMore: boolean
+  similarityThreshold: number
+  searchRangeMultiplier: number
+}
+
+// Predefined configurations
+export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
+  conservative: {
+    algorithm: 'conservative',
+    minWords: 3,
+    maxWords: 4,
+    allowSingleWords: false,
+    smallWordsRequireMore: true,
+    similarityThreshold: 0.7,
+    searchRangeMultiplier: 4
+  },
+  fourWord: {
+    algorithm: 'fourWord',
+    minWords: 4,
+    maxWords: 4,
+    allowSingleWords: false,
+    smallWordsRequireMore: true,
+    similarityThreshold: 0.8,
+    searchRangeMultiplier: 5
+  },
+  balanced: {
+    algorithm: 'balanced',
+    minWords: 2,
+    maxWords: 3,
+    allowSingleWords: true,
+    smallWordsRequireMore: true,
+    similarityThreshold: 0.6,
+    searchRangeMultiplier: 3
+  },
+  aggressive: {
+    algorithm: 'aggressive',
+    minWords: 1,
+    maxWords: 2,
+    allowSingleWords: true,
+    smallWordsRequireMore: false,
+    similarityThreshold: 0.5,
+    searchRangeMultiplier: 2
+  },
+  custom: {
+    algorithm: 'custom',
+    minWords: 2,
+    maxWords: 4,
+    allowSingleWords: true,
+    smallWordsRequireMore: true,
+    similarityThreshold: 0.6,
+    searchRangeMultiplier: 3
+  }
+}
+
+// Get current configuration from localStorage or default
+export const getMatchingConfig = (): MatchingConfig => {
+  const saved = localStorage.getItem('teleprompter-matching-config')
+  if (saved) {
+    try {
+      return JSON.parse(saved)
+    } catch {
+      return MATCHING_CONFIGS.balanced
+    }
+  }
+  return MATCHING_CONFIGS.balanced
+}
+
+// Save configuration to localStorage
+export const saveMatchingConfig = (config: MatchingConfig): void => {
+  localStorage.setItem('teleprompter-matching-config', JSON.stringify(config))
+}
 export const computeSpeechRecognitionTokenIndex = (
   recognized: string,
   reference: TextElement[],
   lastRecognizedTokenIndex: number,
 ) => {
+  const config = getMatchingConfig()
   // Tokenize the recognized input:
   const recognized_tokens = tokenize(recognized).filter(
     element => element.type === "TOKEN",
@@ -18,26 +93,28 @@ export const computeSpeechRecognitionTokenIndex = (
     return lastRecognizedTokenIndex
   }
 
-  // For single words, be more conservative and only match if it's a very common word
-  // or if we're at the beginning of the script
+  // Handle single words based on configuration
   if (recognized_tokens.length === 1) {
-    const singleWord = recognized_tokens[0].value.toLowerCase()
+    if (!config.allowSingleWords) {
+      return lastRecognizedTokenIndex
+    }
     
-    // Only allow single word matches for very common words at the start
+    const singleWord = recognized_tokens[0].value.toLowerCase()
     const commonStartWords = ['hello', 'hi', 'good', 'welcome', 'thank', 'yes', 'no']
     const isAtStart = lastRecognizedTokenIndex <= 2
     
+    // Only allow single word matches for very common words at the start
     if (!commonStartWords.includes(singleWord) || !isAtStart) {
       return lastRecognizedTokenIndex
     }
   }
 
-  // For 2-word phrases with small words, require 3-word matching for better accuracy
-  if (recognized_tokens.length === 2) {
+  // Handle small words based on configuration
+  if (recognized_tokens.length === 2 && config.smallWordsRequireMore) {
     const words = recognized_tokens.map(token => token.value.toLowerCase())
     const smallWords = ['to', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'for', 'with', 'by', 'of', 'a', 'an']
     
-    // If either word is a small word, require 3-word matching
+    // If either word is a small word, require more words
     if (words.some(word => smallWords.includes(word))) {
       return lastRecognizedTokenIndex
     }
@@ -56,9 +133,9 @@ export const computeSpeechRecognitionTokenIndex = (
     lastRecognizedTokenIndex = 0
   }
 
-  // Enhanced search range - look ahead more intelligently
+  // Configurable search range
   const searchRange = Math.min(
-    recognized_tokens.length * 3 + 15, // More generous range
+    recognized_tokens.length * config.searchRangeMultiplier + 15,
     reference.length - lastRecognizedTokenIndex
   )
   
@@ -139,11 +216,11 @@ export const computeSpeechRecognitionTokenIndex = (
   }
 
   if (distances.length > 0) {
-    // Find the best match based on similarity threshold
+    // Find the best match based on configurable similarity threshold
     const minDistance = Math.min(...distances)
     const bestMatches = scores.filter(score => 
       score.distance === minDistance && 
-      score.similarity >= 0.6 // 60% similarity threshold
+      score.similarity >= config.similarityThreshold
     )
     
     if (bestMatches.length > 0) {

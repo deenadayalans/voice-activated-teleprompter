@@ -35,6 +35,7 @@ body {
 .main-content {
   flex: 1;
   overflow: hidden;
+  height: calc(100vh - 60px); /* Account for fixed navbar height */
 }
 
 .main-content.with-panel {
@@ -46,24 +47,30 @@ body {
 .navbar {
   flex-shrink: 0;
   border-bottom: 1px solid $grey-darker;
+  height: 60px; /* Fixed height to prevent resizing */
+  min-height: 60px;
+  max-height: 60px;
 }
 
 .navbar-menu {
   flex: 1;
   display: flex;
   align-items: center;
+  height: 60px; /* Match navbar height */
 }
 
 .navbar-end {
   flex: 1;
   justify-content: flex-end;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent wrapping to maintain fixed height */
   gap: 0.5rem;
+  height: 60px; /* Match navbar height */
 }
 
 .content-area {
-  height: 100%;
+  height: calc(100vh - 60px); /* Account for fixed navbar height */
+  overflow: hidden;
 }
 
 /* NavBar styles */
@@ -77,6 +84,11 @@ body {
   background-color: $black;
   border-color: $grey-dark;
   color: $grey-dark;
+  height: 36px; /* Fixed button height */
+  min-height: 36px;
+  max-height: 36px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 
 .button:hover {
@@ -120,6 +132,29 @@ input[type="range"] {
   margin-top: 0.3em;
 }
 
+/* Ensure navbar items fit within fixed height */
+.navbar-item {
+  height: auto;
+  min-height: 40px;
+  max-height: 50px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Prevent navbar from resizing */
+.navbar-brand {
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-start {
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+
 .navbar-brand li {
   float: left;
   padding: 0 0.5em;
@@ -150,15 +185,16 @@ input[type="range"] {
   font-weight: 400; /* Clean, readable font weight */
 }
 
-/* Reading marker - positioned on second line of 6 */
+/* Reading marker - draggable and user-positioned */
 .reading-marker {
   position: absolute;
-  top: 25%; /* Positioned for second line of 6 lines */
   left: 0;
   right: 0;
-  height: 125px; /* Covers line height for 100px font */
+  height: 180px; /* Bigger marker for easier dragging */
   z-index: 1000;
-  pointer-events: none;
+  pointer-events: auto; /* Enable mouse interactions */
+  cursor: grab;
+  user-select: none;
   
   /* Arrow pointing from left to active line - responsive to sidebar */
   &::before {
@@ -169,11 +205,51 @@ input[type="range"] {
     transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 25px solid transparent;
-    border-bottom: 25px solid transparent;
-    border-left: 40px solid #ffdd57; /* Bigger bright yellow arrow */
-    filter: drop-shadow(0 0 12px rgba(255, 221, 87, 0.8));
+    border-top: 35px solid transparent; /* Bigger arrow */
+    border-bottom: 35px solid transparent;
+    border-left: 50px solid #ffdd57; /* Bigger bright yellow arrow */
+    filter: drop-shadow(0 0 15px rgba(255, 221, 87, 0.9));
     transition: left 0.3s ease; /* Smooth transition when sidebar toggles */
+  }
+  
+  /* Dragging state */
+  &.dragging {
+    cursor: grabbing;
+    
+    &::before {
+      border-left-color: #ff6b35; /* Orange when dragging */
+      filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.9));
+    }
+  }
+  
+  /* Hover effect */
+  &:hover {
+    &::before {
+      border-left-color: #ffed4e; /* Lighter yellow on hover */
+      filter: drop-shadow(0 0 18px rgba(255, 237, 78, 0.9));
+    }
+  }
+  
+  /* Position indicator */
+  .marker-position-indicator {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  
+  &:hover .marker-position-indicator,
+  &.dragging .marker-position-indicator {
+    opacity: 1;
   }
 }
 

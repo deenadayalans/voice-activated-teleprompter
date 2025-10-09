@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { escape } from "html-escaper"
 import { useAppDispatch, useAppSelector } from "../../app/hooks"
 import { setContent, setFinalTranscriptIndex, setInterimTranscriptIndex } from "./contentSlice"
@@ -32,9 +32,17 @@ export const Content = () => {
   const textElements = useAppSelector(selectTextElements)
   const finalTranscriptIndex = useAppSelector(selectFinalTranscriptIndex)
   const interimTranscriptIndex = useAppSelector(selectInterimTranscriptIndex)
+  const [markerPosition, setMarkerPosition] = useState(() => {
+    // Load saved position or default to 25%
+    const saved = localStorage.getItem('teleprompter-marker-position')
+    return saved ? parseFloat(saved) : 25
+  })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStartY, setDragStartY] = useState(0)
+  const [dragStartPosition, setDragStartPosition] = useState(0)
 
     const style = {
-      fontSize: `100px`, // Large font size to fit exactly 6 lines
+      fontSize: `140px`, // Larger font size for better readability
       padding: `0 ${margin}px`,
       marginLeft: `80px`, // Move text to the right to avoid marker overlap
     }
@@ -42,27 +50,140 @@ export const Content = () => {
   const containerRef = useRef<null | HTMLDivElement>(null)
   const lastRef = useRef<null | HTMLDivElement>(null)
   const bottomSpacerRef = useRef<null | HTMLDivElement>(null)
+  const lastScrollTop = useRef<number>(0)
+  const maxScrollReached = useRef<number>(0)
+  const isUserScrolling = useRef<boolean>(false)
+  const userScrollTimeout = useRef<NodeJS.Timeout | null>(null)
 
         useEffect(() => {
           if (containerRef.current) {
             if (lastRef.current) {
-              // Position the active line at the reading marker (second line of 6)
+              // Position the active line at the reading marker (user-adjustable)
               const containerHeight = containerRef.current.clientHeight
-              const markerPosition = containerHeight * 0.25 // 25% from top (second line of 6)
-              const targetScrollTop = Math.max(lastRef.current.offsetTop - markerPosition, 0)
+              const markerPixelPosition = containerHeight * (markerPosition / 100) // Convert percentage to pixels
+              const targetScrollTop = Math.max(lastRef.current.offsetTop - markerPixelPosition, 0)
               
-              containerRef.current.scrollTo({
-                top: targetScrollTop,
-                behavior: "smooth",
-              })
+              // FORWARD-ONLY AUTO-SCROLLING: Only auto-scroll if moving forward (upward)
+              const currentScrollTop = containerRef.current.scrollTop
+              const targetScroll = Math.max(targetScrollTop, maxScrollReached.current)
+              
+              // Only auto-scroll if:
+              // 1. Target is ahead of current position (forward movement)
+              // 2. User is not currently manually scrolling
+              if (targetScroll > currentScrollTop && !isUserScrolling.current) {
+                lastScrollTop.current = targetScroll
+                maxScrollReached.current = Math.max(maxScrollReached.current, targetScroll)
+                containerRef.current.scrollTo({
+                  top: targetScroll,
+                  behavior: "smooth",
+                })
+              }
             } else {
-              containerRef.current.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              })
+              // Reset scroll tracking when starting fresh
+              maxScrollReached.current = 0
+              lastScrollTop.current = 0
+              isUserScrolling.current = false
+              if (userScrollTimeout.current) {
+                clearTimeout(userScrollTimeout.current)
+                userScrollTimeout.current = null
+              }
+              if (containerRef.current.scrollTop === 0) {
+                containerRef.current.scrollTo({
+                  top: 0,
+                  behavior: "smooth",
+                })
+              }
             }
           }
         })
+
+  // Track manual scrolling to allow user control
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const currentScroll = container.scrollTop
+      
+      // Detect user scrolling (not automatic)
+      isUserScrolling.current = true
+      
+      // Clear previous timeout
+      if (userScrollTimeout.current) {
+        clearTimeout(userScrollTimeout.current)
+      }
+      
+      // Set timeout to detect when user stops scrolling
+      userScrollTimeout.current = setTimeout(() => {
+        isUserScrolling.current = false
+      }, 150) // 150ms after user stops scrolling
+      
+      // Update max scroll reached for user-initiated scrolling
+      maxScrollReached.current = Math.max(maxScrollReached.current, currentScroll)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      if (userScrollTimeout.current) {
+        clearTimeout(userScrollTimeout.current)
+      }
+    }
+  }, [])
+
+  // Drag handlers for marker
+  const handleMarkerMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+    setDragStartY(e.clientY)
+    setDragStartPosition(markerPosition)
+  }
+
+  const handleMarkerMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return
+    
+    const containerHeight = containerRef.current.clientHeight
+    const deltaY = e.clientY - dragStartY
+    const deltaPercentage = (deltaY / containerHeight) * 100
+    const newPosition = Math.max(0, Math.min(100, dragStartPosition + deltaPercentage))
+    setMarkerPosition(newPosition)
+  }
+
+  const handleMarkerMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  // Global mouse events for dragging
+  useEffect(() => {
+    if (isDragging) {
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        if (!containerRef.current) return
+        
+        const containerHeight = containerRef.current.clientHeight
+        const deltaY = e.clientY - dragStartY
+        const deltaPercentage = (deltaY / containerHeight) * 100
+        const newPosition = Math.max(0, Math.min(100, dragStartPosition + deltaPercentage))
+        setMarkerPosition(newPosition)
+      }
+
+      const handleGlobalMouseUp = () => {
+        setIsDragging(false)
+      }
+
+      document.addEventListener('mousemove', handleGlobalMouseMove)
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove)
+        document.removeEventListener('mouseup', handleGlobalMouseUp)
+      }
+    }
+  }, [isDragging, dragStartY, dragStartPosition])
+
+  // Save marker position to localStorage
+  useEffect(() => {
+    localStorage.setItem('teleprompter-marker-position', markerPosition.toString())
+  }, [markerPosition])
 
   // Keyboard shortcuts for skip functionality
   useEffect(() => {
@@ -115,6 +236,12 @@ export const Content = () => {
           dispatch(setInterimTranscriptIndex(endIndex))
           console.log(`Skipped to end: ${endIndex}`)
           break
+        case 'r':
+        case 'R':
+          // Reset marker position to default (25%)
+          event.preventDefault()
+          setMarkerPosition(25)
+          break
       }
     }
 
@@ -154,9 +281,21 @@ export const Content = () => {
   }, [scrollOffset, textElements.length])
 
   return (
-    <main className="content-area">
-      {/* Reading marker - fixed position at top */}
-      <div className="reading-marker" />
+        <main className="content-area" style={{ scrollBehavior: 'smooth' }}>
+          {/* Reading marker - draggable and user-positioned */}
+          <div 
+            className={`reading-marker ${isDragging ? 'dragging' : ''}`}
+            style={{ top: `${markerPosition}%` }}
+            onMouseDown={handleMarkerMouseDown}
+            onMouseMove={handleMarkerMouseMove}
+            onMouseUp={handleMarkerMouseUp}
+            title={`Reading position: ${Math.round(markerPosition)}% - Drag to adjust`}
+          >
+            {/* Position indicator */}
+            <div className="marker-position-indicator">
+              {Math.round(markerPosition)}%
+            </div>
+          </div>
       
       {status === "editing" ? (
         <textarea

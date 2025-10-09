@@ -22,6 +22,9 @@ import {
 
 import { resetTranscriptionIndices } from "../content/contentSlice"
 import { selectIsPanelOpen, setPanelOpen } from "../script-manager/scriptManagerSlice"
+import { AccentStatus } from "./AccentStatus"
+import { WhisperConfig } from "./WhisperConfig"
+import { MatchingConfig } from "./MatchingConfig"
 
 export const NavBar = () => {
   const dispatch = useAppDispatch()
@@ -136,6 +139,15 @@ export const NavBar = () => {
               </div>
             </>
           ) : null}
+
+          {/* Whisper API Configuration */}
+          <WhisperConfig />
+
+          {/* Speech Matching Configuration */}
+          <MatchingConfig />
+
+          {/* Accent Status Indicator */}
+          <AccentStatus />
 
           <div className="buttons navbar-item">
             <button
