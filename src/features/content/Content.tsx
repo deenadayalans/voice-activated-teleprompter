@@ -54,48 +54,72 @@ export const Content = () => {
   const maxScrollReached = useRef<number>(0)
   const isUserScrolling = useRef<boolean>(false)
   const userScrollTimeout = useRef<NodeJS.Timeout | null>(null)
+  // Linear scroll animation refs
+  const animFrameRef = useRef<number | null>(null)
+  const animTargetRef = useRef<number>(0)
+  const lastTsRef = useRef<number | null>(null)
+  const SCROLL_SPEED_PX_PER_SEC = 450
 
-        useEffect(() => {
-          if (containerRef.current) {
-            if (lastRef.current) {
-              // Position the active line at the reading marker (user-adjustable)
-              const containerHeight = containerRef.current.clientHeight
-              const markerPixelPosition = containerHeight * (markerPosition / 100) // Convert percentage to pixels
-              const targetScrollTop = Math.max(lastRef.current.offsetTop - markerPixelPosition, 0)
-              
-              // FORWARD-ONLY AUTO-SCROLLING: Only auto-scroll if moving forward (upward)
-              const currentScrollTop = containerRef.current.scrollTop
-              const targetScroll = Math.max(targetScrollTop, maxScrollReached.current)
-              
-              // Only auto-scroll if:
-              // 1. Target is ahead of current position (forward movement)
-              // 2. User is not currently manually scrolling
-              if (targetScroll > currentScrollTop && !isUserScrolling.current) {
-                lastScrollTop.current = targetScroll
-                maxScrollReached.current = Math.max(maxScrollReached.current, targetScroll)
-                containerRef.current.scrollTo({
-                  top: targetScroll,
-                  behavior: "smooth",
-                })
-              }
-            } else {
-              // Reset scroll tracking when starting fresh
-              maxScrollReached.current = 0
-              lastScrollTop.current = 0
-              isUserScrolling.current = false
-              if (userScrollTimeout.current) {
-                clearTimeout(userScrollTimeout.current)
-                userScrollTimeout.current = null
-              }
-              if (containerRef.current.scrollTop === 0) {
-                containerRef.current.scrollTo({
-                  top: 0,
-                  behavior: "smooth",
-                })
-              }
+        // Linear auto-scroll animation (video-like)
+        const stopAnimation = () => {
+          if (animFrameRef.current !== null) {
+            cancelAnimationFrame(animFrameRef.current)
+            animFrameRef.current = null
+          }
+          lastTsRef.current = null
+        }
+
+        const step = (ts: number) => {
+          const container = containerRef.current
+          if (!container) return stopAnimation()
+          const target = animTargetRef.current
+          const current = container.scrollTop
+          if (target <= current + 0.5) return stopAnimation()
+
+          const last = lastTsRef.current ?? ts
+          const dt = Math.max(0, (ts - last) / 1000)
+          lastTsRef.current = ts
+          const maxStep = SCROLL_SPEED_PX_PER_SEC * dt
+          const delta = Math.min(target - current, maxStep)
+          container.scrollTop = current + delta
+          animFrameRef.current = requestAnimationFrame(step)
+        }
+
+        const ensureAnimationTo = (desired: number) => {
+          const container = containerRef.current
+          if (!container) return
+          // Forward-only target
+          const forwardTarget = Math.max(container.scrollTop, desired)
+          if (forwardTarget > animTargetRef.current + 0.5) {
+            animTargetRef.current = forwardTarget
+            if (animFrameRef.current === null) {
+              animFrameRef.current = requestAnimationFrame(step)
             }
           }
-        })
+        }
+
+        useEffect(() => {
+          const container = containerRef.current
+          const activeEl = lastRef.current
+          if (!container || !activeEl) return
+
+          // Compute desired scroll so the active word sits just ABOVE the marker
+          const containerRect = container.getBoundingClientRect()
+          const activeRect = activeEl.getBoundingClientRect()
+          const markerY = containerRect.top + (containerRect.height * (markerPosition / 100))
+          const delta = activeRect.top - markerY
+          const lineOffset = activeRect.height
+          const desiredScroll = Math.max(0, container.scrollTop + delta + lineOffset)
+
+          if (!isUserScrolling.current) {
+            ensureAnimationTo(desiredScroll)
+          }
+        }, [finalTranscriptIndex, interimTranscriptIndex, markerPosition])
+
+        // Cleanup animation on unmount
+        useEffect(() => () => {
+          if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current)
+        }, [])
 
   // Track manual scrolling to allow user control
   useEffect(() => {
@@ -315,12 +339,10 @@ export const Content = () => {
           }}
           title="Click any word to skip to it. Use arrow keys: → next word, ↓ next sentence, ↑ next paragraph, Home/End for start/end"
         >
-          {textElements.map((textElement, index, array) => {
-            const itemProps =
-              interimTranscriptIndex > 0 &&
-              index === Math.min(interimTranscriptIndex + 2, array.length - 1)
-                ? { ref: lastRef }
-                : {}
+          {textElements.map((textElement) => {
+            const activeIndex = Math.max(finalTranscriptIndex, interimTranscriptIndex)
+            const isActive = textElement.index === activeIndex
+            const itemProps = isActive ? { ref: lastRef } : {}
             return (
               <span
                 key={textElement.index}
@@ -334,11 +356,9 @@ export const Content = () => {
                   console.log(`Skipped to word ${textElement.index}: "${textElement.value}"`)
                 }}
                 className={
-                  finalTranscriptIndex > 0 &&
-                  textElement.index <= finalTranscriptIndex + 1
+                  textElement.index <= finalTranscriptIndex
                     ? "final-transcript"
-                    : interimTranscriptIndex > 0 &&
-                        textElement.index <= interimTranscriptIndex + 1
+                    : textElement.index <= interimTranscriptIndex
                       ? "interim-transcript"
                       : "has-text-white"
                 }

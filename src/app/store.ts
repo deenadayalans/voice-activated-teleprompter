@@ -4,10 +4,11 @@ import { setupListeners } from "@reduxjs/toolkit/query"
 import { navbarSlice } from "../features/navbar/navbarSlice"
 import { contentSlice } from "../features/content/contentSlice"
 import { scriptManagerSlice } from "../features/script-manager/scriptManagerSlice"
+import { scriptsSlice } from "../features/scripts/scriptsSlice"
 
 // `combineSlices` automatically combines the reducers using
 // their `reducerPath`s, therefore we no longer need to call `combineReducers`.
-const rootReducer = combineSlices(navbarSlice, contentSlice, scriptManagerSlice)
+const rootReducer = combineSlices(navbarSlice, contentSlice, scriptManagerSlice, scriptsSlice)
 
 // Infer the `RootState` type from the root reducer
 export type RootState = ReturnType<typeof rootReducer>

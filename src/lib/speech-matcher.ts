@@ -151,40 +151,31 @@ export const computeSpeechRecognitionTokenIndex = (
   }
 
   // Multi-strategy matching for better accuracy - prioritize 2-3 word phrases
-
-  // Strategy 1: Exact 2-3 word phrase matching (highest priority)
-  // Use the full recognized phrase length (2-3 words) for exact matching
-  const phraseLength = recognized_tokens.length
+  // Build tail phrases from recognized tokens (use the last up to maxWords)
+  const maxPhrase = Math.min(config.maxWords, recognized_tokens.length)
+  const minPhrase = Math.max(2, config.minWords)
   
-  for (let i = 0; i <= reference_tokens.length - phraseLength; i++) {
-    const reference_substring = reference_tokens
-      .slice(i, i + phraseLength)
-      .reduce(
-        (accumulator, currentToken) => accumulator + " " + currentToken.value,
-        "",
-      )
-      .replace(/\s+/, " ")
-      .trim()
+  for (let k = maxPhrase; k >= minPhrase; k--) {
+    const tailTokens = recognized_tokens.slice(-k)
+    const tailPhrase = tailTokens.map(t => t.value).join(' ').toLowerCase()
     
-    if (reference_substring.toLowerCase() === comparison_string.toLowerCase()) {
-      return reference_tokens[i].index
+    // Strategy 1: Exact phrase match (k words)
+    for (let i = 0; i <= reference_tokens.length - k; i++) {
+      const refSlice = reference_tokens.slice(i, i + k)
+      const refPhrase = refSlice.map(t => t.value).join(' ').toLowerCase()
+      if (refPhrase === tailPhrase) {
+        // Advance to the end of the matched phrase (not the start)
+        return refSlice[k - 1].index
+      }
     }
-  }
-
-  // Strategy 2: 2-3 word phrase contains matching (high priority)
-  for (let i = 0; i <= reference_tokens.length - phraseLength; i++) {
-    const reference_substring = reference_tokens
-      .slice(i, i + phraseLength)
-      .reduce(
-        (accumulator, currentToken) => accumulator + " " + currentToken.value,
-        "",
-      )
-      .replace(/\s+/, " ")
-      .trim()
     
-    if (reference_substring.toLowerCase().includes(comparison_string.toLowerCase()) ||
-        comparison_string.toLowerCase().includes(reference_substring.toLowerCase())) {
-      return reference_tokens[i].index
+    // Strategy 2: Contains (lenient) phrase match
+    for (let i = 0; i <= reference_tokens.length - k; i++) {
+      const refSlice = reference_tokens.slice(i, i + k)
+      const refPhrase = refSlice.map(t => t.value).join(' ').toLowerCase()
+      if (refPhrase.includes(tailPhrase) || tailPhrase.includes(refPhrase)) {
+        return refSlice[k - 1].index
+      }
     }
   }
 
@@ -225,10 +216,9 @@ export const computeSpeechRecognitionTokenIndex = (
     
     if (bestMatches.length > 0) {
       const bestMatch = bestMatches[0]
-      const token = reference_tokens[bestMatch.index - 1]
-      if (token && token.index > lastRecognizedTokenIndex) {
-        return token.index
-      }
+      const token = reference_tokens[Math.max(0, bestMatch.index - 1)]
+      const nextIndex = token ? token.index : lastRecognizedTokenIndex
+      if (nextIndex > lastRecognizedTokenIndex) return nextIndex
     }
   }
 
@@ -252,8 +242,19 @@ export const computeSpeechRecognitionTokenIndex = (
       
       // For 2+ word phrases, require at least 2 words to match
       if (matchCount >= 2) {
-        return reference_tokens[i].index
+        const endTok = reference_tokens[i + Math.min(recognizedWords.length, referenceWords.length) - 1]
+        return endTok.index
       }
+    }
+  }
+
+  // Strategy 5: strict next-word progression (single word) — only if it matches the immediate next token
+  if (recognized_tokens.length >= 1) {
+    const nextRefIndex = lastRecognizedTokenIndex + 1
+    const nextRefToken = reference.find(t => t.index === nextRefIndex)
+    const spoken = recognized_tokens[recognized_tokens.length - 1].value.toLowerCase()
+    if (nextRefToken && nextRefToken.value.toLowerCase() === spoken) {
+      return nextRefIndex
     }
   }
 
