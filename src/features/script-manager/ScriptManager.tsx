@@ -36,7 +36,17 @@ export const ScriptManager = () => {
 
     try {
       const uploadedScripts: Script[] = []
-      let fileNumber = 1
+      
+      // Find the highest existing script number
+      const existingNumbers = scripts
+        .map(script => {
+          const match = script.name.match(/^(\d+)\./)
+          return match ? parseInt(match[1]) : 0
+        })
+        .filter(num => num > 0)
+      
+      const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0
+      let fileNumber = maxNumber + 1
       
       for (const file of Array.from(files)) {
         if (file.type === "text/plain" || file.name.endsWith('.txt')) {
