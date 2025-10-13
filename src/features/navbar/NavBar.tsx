@@ -49,18 +49,18 @@ export const NavBar = () => {
           <div className="title has-text-grey">
             <div>Voice-Activated Teleprompter</div>
             <ul className="is-size-7">
-              <li className="first has-text-white">
+              {/* <li className="first has-text-white">
                 &copy; Julien Lecomte (2024)
-              </li>
-              <li className="has-text-warning">
+              </li> */}
+              <li className="has-text-warning last">
                 <i className="fa-solid fa-triangle-exclamation"></i> Only works
                 in Chrome
               </li>
-              <li className="last">
+              {/* <li className="last">
                 <a href="https://www.paypal.com/donate/?hosted_button_id=49UXY8F6VVYFA">
                   Support this project
                 </a>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>
