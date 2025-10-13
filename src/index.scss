@@ -150,8 +150,7 @@ input[type="range"] {
 /* Prevent navbar from resizing */
 .navbar-brand {
   height: 60px;
-  display: flex;
-  align-items: center;
+  display: none; /* Hide navbar brand */
 }
 
 .navbar-start {
