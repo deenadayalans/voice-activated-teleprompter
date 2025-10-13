@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useEffect } from "react"
 import { useAppDispatch, useAppSelector } from "../../app/hooks"
 import {
   selectScripts,
@@ -36,19 +36,21 @@ export const ScriptManager = () => {
 
     try {
       const uploadedScripts: Script[] = []
+      let fileNumber = 1
       
       for (const file of Array.from(files)) {
         if (file.type === "text/plain" || file.name.endsWith('.txt')) {
           const content = await file.text()
           const script = {
             id: `script-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            name: file.name.replace('.txt', ''),
+            name: `${fileNumber}. ${file.name.replace('.txt', '')}`,
             content,
             lastModified: file.lastModified, // Store as timestamp
             filePath: file.name,
           }
           dispatch(addScript(script))
           uploadedScripts.push(script)
+          fileNumber++
         }
       }
       
@@ -84,6 +86,51 @@ export const ScriptManager = () => {
       dispatch(removeScript(scriptId))
     }
   }
+
+  const handleScriptSelectByNumber = (scriptNumber: number) => {
+    // Find script by number (assuming scripts are ordered by upload sequence)
+    const sortedScripts = [...scripts].sort((a, b) => {
+      const aNum = parseInt(a.name.match(/^(\d+)\./)?.[1] || '0')
+      const bNum = parseInt(b.name.match(/^(\d+)\./)?.[1] || '0')
+      return aNum - bNum
+    })
+    
+    const targetScript = sortedScripts[scriptNumber - 1]
+    if (targetScript) {
+      handleScriptSelect(targetScript.id)
+    }
+  }
+
+  // Handle keyboard shortcuts for script selection
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Only handle number keys 1-9
+      if (event.key >= '1' && event.key <= '9') {
+        const scriptNumber = parseInt(event.key)
+        const sortedScripts = [...scripts].sort((a, b) => {
+          const aNum = parseInt(a.name.match(/^(\d+)\./)?.[1] || '0')
+          const bNum = parseInt(b.name.match(/^(\d+)\./)?.[1] || '0')
+          return aNum - bNum
+        })
+        
+        // Check if the requested script number exists
+        if (scriptNumber <= sortedScripts.length) {
+          const targetScript = sortedScripts[scriptNumber - 1]
+          if (targetScript) {
+            handleScriptSelect(targetScript.id)
+          }
+        }
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('keydown', handleKeyPress)
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [scripts])
 
   const togglePanel = () => {
     dispatch(setPanelOpen(!isPanelOpen))
@@ -157,14 +204,41 @@ export const ScriptManager = () => {
               <p className="is-size-7">Upload .txt files to get started</p>
             </div>
           ) : (
-            scripts.map(script => (
+            <>
+              {scripts.length > 0 && (
+                <div className="keyboard-shortcut-hint has-text-grey-light has-text-centered is-size-7">
+                  💡 Press number keys (1-9) to quickly switch scripts
+                </div>
+              )}
+              {scripts.map(script => (
               <div
                 key={script.id}
                 className={`script-item ${selectedScript?.id === script.id ? 'is-active' : ''}`}
                 onClick={() => handleScriptSelect(script.id)}
               >
                 <div className="script-info">
-                  <div className="script-name">{script.name}</div>
+                  <div className="script-name">
+                    {script.name.match(/^(\d+)\.\s*(.+)$/) ? (
+                      <>
+                        <span 
+                          className="script-number"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const scriptNumber = parseInt(script.name.match(/^(\d+)\./)?.[1] || '0')
+                            handleScriptSelectByNumber(scriptNumber)
+                          }}
+                          title="Click to open this script"
+                        >
+                          {script.name.match(/^(\d+)\.\s*(.+)$/)?.[1]}.
+                        </span>
+                        <span className="script-filename">
+                          {script.name.match(/^(\d+)\.\s*(.+)$/)?.[2]}
+                        </span>
+                      </>
+                    ) : (
+                      script.name
+                    )}
+                  </div>
                   <div className="script-meta">
                     <small className="has-text-grey">
                       {new Date(script.lastModified).toLocaleDateString()}
@@ -180,7 +254,8 @@ export const ScriptManager = () => {
                   title="Delete script"
                 />
               </div>
-            ))
+            ))}
+            </>
           )}
         </div>
       </div>

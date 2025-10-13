@@ -272,6 +272,34 @@ div.content {
   text-overflow: ellipsis;
 }
 
+.script-number {
+  color: $primary;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background-color: $primary;
+    color: $white;
+    transform: scale(1.05);
+  }
+}
+
+.script-filename {
+  color: $white;
+}
+
+.keyboard-shortcut-hint {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid $primary;
+}
+
 .script-meta {
   margin-top: 0.25rem;
 }
