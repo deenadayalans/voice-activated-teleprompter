@@ -26,10 +26,15 @@ body {
 
 .side-panel {
   width: 300px;
+  height: 100vh;
   background-color: $grey-darker;
   border-right: 1px solid $grey-dark;
   flex-shrink: 0;
-  overflow-y: auto;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
 }
 
 .main-content {
@@ -38,7 +43,7 @@ body {
 }
 
 .main-content.with-panel {
-  margin-left: 0;
+  margin-left: 300px; /* Account for fixed script manager width */
 }
 
 /* Layout */
@@ -176,11 +181,17 @@ div.content {
 }
 
 .script-manager-panel {
-  height: 100%;
+  width: 300px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: $grey-darker;
   color: $white;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
 }
 
 .script-manager-header {
@@ -198,9 +209,31 @@ div.content {
 }
 
 .script-manager-content {
-  flex: 1;
+  width: 300px;
+  height: calc(100vh - 80px); /* Full viewport height minus header */
   padding: 1rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: $grey-dark;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: $grey;
+    border-radius: 3px;
+    
+    &:hover {
+      background: $grey-light;
+    }
+  }
 }
 
 .file-upload-section {
@@ -235,6 +268,30 @@ div.content {
 
 .scripts-list {
   margin-top: 1rem;
+  width: 268px; /* 300px - 32px padding */
+  height: calc(100vh - 200px); /* Responsive height based on viewport */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  
+  /* Custom scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: $grey-dark;
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: $grey;
+    border-radius: 3px;
+    
+    &:hover {
+      background: $grey-light;
+    }
+  }
 }
 
 .script-item {
@@ -307,6 +364,37 @@ div.content {
 .script-item .delete {
   margin-left: 0.5rem;
   flex-shrink: 0;
+}
+
+/* Responsive script manager heights for different screen sizes */
+@media (max-height: 600px) {
+  .script-manager-content {
+    height: calc(100vh - 60px);
+  }
+  
+  .scripts-list {
+    height: calc(100vh - 150px);
+  }
+}
+
+@media (max-height: 480px) {
+  .script-manager-content {
+    height: calc(100vh - 50px);
+  }
+  
+  .scripts-list {
+    height: calc(100vh - 120px);
+  }
+}
+
+@media (min-height: 800px) {
+  .script-manager-content {
+    height: calc(100vh - 100px);
+  }
+  
+  .scripts-list {
+    height: calc(100vh - 250px);
+  }
 }
 
 .notification {
