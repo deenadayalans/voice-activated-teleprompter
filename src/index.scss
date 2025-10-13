@@ -224,6 +224,34 @@ div.content {
   transform: scale(1.02);
 }
 
+/* End of script indicator styles */
+.end-of-script-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+  padding: 1rem 0;
+}
+
+.end-of-script-line {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, $yellow, transparent);
+  margin-bottom: 0.5rem;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(255, 255, 0, 0.3);
+}
+
+.end-of-script-text {
+  color: $yellow;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 5px rgba(255, 255, 0, 0.5);
+  opacity: 0.8;
+}
+
 /* Script Manager styles */
 
 .script-manager-toggle {

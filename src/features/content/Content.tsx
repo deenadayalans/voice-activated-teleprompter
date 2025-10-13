@@ -381,6 +381,13 @@ export const Content = () => {
               />
             )
           })}
+          
+          {/* End of script indicator */}
+          <div className="end-of-script-indicator">
+            <div className="end-of-script-line"></div>
+            <div className="end-of-script-text">End of Script</div>
+          </div>
+          
           <div
             aria-hidden="true"
             ref={bottomSpacerRef}
