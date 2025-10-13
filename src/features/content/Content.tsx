@@ -121,6 +121,18 @@ export const Content = () => {
           if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current)
         }, [])
 
+  // Reset scroll position to top when content changes (script switching)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    
+    // Reset scroll to top when rawText changes (new script loaded)
+    container.scrollTop = 0
+    lastScrollTop.current = 0
+    maxScrollReached.current = 0
+    isUserScrolling.current = false
+  }, [rawText])
+
   // Track manual scrolling to allow user control
   useEffect(() => {
     const container = containerRef.current
