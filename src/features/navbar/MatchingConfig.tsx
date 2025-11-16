@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
-import { getMatchingConfig, saveMatchingConfig, MATCHING_CONFIGS, type MatchingConfig } from '../../lib/speech-matcher'
+import { getMatchingConfig, saveMatchingConfig, MATCHING_CONFIGS, type MatchingConfig as MatchingConfigType } from '../../lib/speech-matcher'
 
 export const MatchingConfig = () => {
-  const [config, setConfig] = useState<MatchingConfig>(MATCHING_CONFIGS.balanced)
+  const [config, setConfig] = useState<MatchingConfigType>(MATCHING_CONFIGS.balanced)
   const [showConfig, setShowConfig] = useState(false)
 
   useEffect(() => {
     setConfig(getMatchingConfig())
   }, [])
 
-  const handleConfigChange = (newConfig: MatchingConfig) => {
+  const handleConfigChange = (newConfig: MatchingConfigType) => {
     setConfig(newConfig)
     saveMatchingConfig(newConfig)
   }
@@ -110,6 +110,25 @@ export const MatchingConfig = () => {
                   </div>
 
                   <div className="field">
+                    <label className="label">Search Range</label>
+                    <div className="control">
+                      <input
+                        className="input"
+                        type="range"
+                        min="1"
+                        max="8"
+                        step="1"
+                        value={config.searchRangeMultiplier}
+                        onChange={(e) => handleConfigChange({
+                          ...config,
+                          searchRangeMultiplier: parseInt(e.target.value)
+                        })}
+                      />
+                      <p className="help">Lookahead multiplier: {config.searchRangeMultiplier}×</p>
+                    </div>
+                  </div>
+
+                  <div className="field">
                     <label className="label">Similarity Threshold</label>
                     <div className="control">
                       <input
@@ -140,6 +159,54 @@ export const MatchingConfig = () => {
                           })}
                         />
                         Allow single word matches
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <div className="control">
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={config.normalizeDiacritics}
+                          onChange={(e) => handleConfigChange({
+                            ...config,
+                            normalizeDiacritics: e.target.checked
+                          })}
+                        />
+                        Diacritic-insensitive matching (better cross-accent performance)
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <div className="control">
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={config.ignorePunctuation}
+                          onChange={(e) => handleConfigChange({
+                            ...config,
+                            ignorePunctuation: e.target.checked
+                          })}
+                        />
+                        Ignore punctuation (treats “word,” and “word” the same)
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="field">
+                    <div className="control">
+                      <label className="checkbox">
+                        <input
+                          type="checkbox"
+                          checked={config.strictNextWord}
+                          onChange={(e) => handleConfigChange({
+                            ...config,
+                            strictNextWord: e.target.checked
+                          })}
+                        />
+                        Strict next-word progression (prevents jumps, safer in noisy rooms)
                       </label>
                     </div>
                   </div>

@@ -25,7 +25,7 @@ export default class SpeechRecognizer {
     console.log('SpeechRecognizer constructor - whisperApiKey found:', !!whisperApiKey)
     console.log('SpeechRecognizer constructor - language:', language)
     
-    if (false && whisperApiKey && whisperApiKey !== 'your_api_key_here') {
+    if (whisperApiKey && whisperApiKey !== 'your_api_key_here') {
       console.log('Using Whisper API for speech recognition')
       this.useWhisperAPI = true
       this.whisperRecognizer = new WhisperAPIRecognizer(whisperApiKey)

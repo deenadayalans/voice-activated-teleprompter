@@ -52,6 +52,7 @@ export const startTeleprompter = (): AppThunk => async (dispatch, getState) => {
             interim_transcript,
             textElements,
             lastFinalTranscriptIndex,
+            true,
           )
           dispatch(setInterimTranscriptIndex(interimTranscriptIndex))
         }

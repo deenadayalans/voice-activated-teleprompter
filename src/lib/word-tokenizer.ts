@@ -22,10 +22,10 @@ export const tokenize = (text: string | null) => {
     if (s === "[") {
       const hintLength = text.substring(i).indexOf("]")
       s =
-        hintLength > 0 ? text.substring(i, i + hintLength + 1) : s.substring(i)
+        hintLength > 0 ? text.substring(i, i + hintLength + 1) : text.substring(i)
       inToken = false
     } else {
-      inToken = /[A-Za-zÀ-ÿА-Яа-я0-9_]/.test(s)
+      inToken = /[A-Za-zÀ-ÿА-Яа-я0-9_'\u2019-]/.test(s)
     }
 
     if (current === null) {

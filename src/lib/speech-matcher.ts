@@ -10,6 +10,9 @@ export interface MatchingConfig {
   smallWordsRequireMore: boolean
   similarityThreshold: number
   searchRangeMultiplier: number
+  strictNextWord: boolean
+  normalizeDiacritics: boolean
+  ignorePunctuation: boolean
 }
 
 // Predefined configurations
@@ -21,7 +24,10 @@ export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
     allowSingleWords: false,
     smallWordsRequireMore: true,
     similarityThreshold: 0.7,
-    searchRangeMultiplier: 4
+    searchRangeMultiplier: 4,
+    strictNextWord: false,
+    normalizeDiacritics: true,
+    ignorePunctuation: true,
   },
   fourWord: {
     algorithm: 'fourWord',
@@ -30,7 +36,10 @@ export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
     allowSingleWords: false,
     smallWordsRequireMore: true,
     similarityThreshold: 0.8,
-    searchRangeMultiplier: 5
+    searchRangeMultiplier: 5,
+    strictNextWord: false,
+    normalizeDiacritics: true,
+    ignorePunctuation: true,
   },
   balanced: {
     algorithm: 'balanced',
@@ -39,7 +48,10 @@ export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
     allowSingleWords: true,
     smallWordsRequireMore: true,
     similarityThreshold: 0.6,
-    searchRangeMultiplier: 3
+    searchRangeMultiplier: 3,
+    strictNextWord: false,
+    normalizeDiacritics: true,
+    ignorePunctuation: true,
   },
   aggressive: {
     algorithm: 'aggressive',
@@ -48,7 +60,10 @@ export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
     allowSingleWords: true,
     smallWordsRequireMore: false,
     similarityThreshold: 0.5,
-    searchRangeMultiplier: 2
+    searchRangeMultiplier: 2,
+    strictNextWord: false,
+    normalizeDiacritics: true,
+    ignorePunctuation: true,
   },
   custom: {
     algorithm: 'custom',
@@ -57,7 +72,10 @@ export const MATCHING_CONFIGS: Record<string, MatchingConfig> = {
     allowSingleWords: true,
     smallWordsRequireMore: true,
     similarityThreshold: 0.6,
-    searchRangeMultiplier: 3
+    searchRangeMultiplier: 3,
+    strictNextWord: false,
+    normalizeDiacritics: true,
+    ignorePunctuation: true,
   }
 }
 
@@ -66,7 +84,9 @@ export const getMatchingConfig = (): MatchingConfig => {
   const saved = localStorage.getItem('teleprompter-matching-config')
   if (saved) {
     try {
-      return JSON.parse(saved)
+      const parsed = JSON.parse(saved)
+      // Merge over balanced to ensure new fields exist
+      return { ...MATCHING_CONFIGS.balanced, ...parsed }
     } catch {
       return MATCHING_CONFIGS.balanced
     }
@@ -78,10 +98,26 @@ export const getMatchingConfig = (): MatchingConfig => {
 export const saveMatchingConfig = (config: MatchingConfig): void => {
   localStorage.setItem('teleprompter-matching-config', JSON.stringify(config))
 }
+
+// Normalize string for robust matching across accents/punctuation
+const normalizeForMatching = (s: string, config: MatchingConfig): string => {
+  let out = s.toLowerCase()
+  if (config.normalizeDiacritics) {
+    out = out.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  }
+  if (config.ignorePunctuation) {
+    // Keep letters, numbers, whitespace, apostrophes and hyphens
+    out = out.replace(/[^\p{L}\p{N}\s'\-]/gu, '')
+  }
+  // Collapse multiple spaces
+  out = out.replace(/\s+/g, ' ').trim()
+  return out
+}
 export const computeSpeechRecognitionTokenIndex = (
   recognized: string,
   reference: TextElement[],
   lastRecognizedTokenIndex: number,
+  isInterim: boolean = false,
 ) => {
   const config = getMatchingConfig()
   // Tokenize the recognized input:
@@ -90,6 +126,26 @@ export const computeSpeechRecognitionTokenIndex = (
   )
 
   if (recognized_tokens.length === 0) {
+    return lastRecognizedTokenIndex
+  }
+
+  // Determine the immediate next reference token
+  const nextRefIndex = Math.max(0, lastRecognizedTokenIndex + 1)
+  const nextRefToken = reference.find(t => t.index === nextRefIndex && t.type === "TOKEN")
+
+  // Strict mode: only move forward when the immediate next token matches
+  if (config.strictNextWord) {
+    if (recognized_tokens.length >= 1 && nextRefToken) {
+      const spoken = normalizeForMatching(recognized_tokens[recognized_tokens.length - 1].value, config)
+      const ref = normalizeForMatching(nextRefToken.value, config)
+      if (ref === spoken) {
+        return nextRefIndex
+      }
+      if (isInterim && (ref.startsWith(spoken) || spoken.startsWith(ref))) {
+        // For interim, highlight the next word when partially spoken
+        return nextRefIndex
+      }
+    }
     return lastRecognizedTokenIndex
   }
 
@@ -121,13 +177,14 @@ export const computeSpeechRecognitionTokenIndex = (
   }
 
   // Convert the tokens back to a string:
-  const comparison_string = recognized_tokens
-    .reduce(
-      (accumulator, currentToken) => accumulator + " " + currentToken.value,
-      "",
-    )
-    .replace(/\s+/, " ")
-    .trim()
+  const comparison_string = normalizeForMatching(
+    recognized_tokens
+      .reduce(
+        (accumulator, currentToken) => accumulator + " " + currentToken.value,
+        "",
+      ),
+    config
+  )
 
   if (lastRecognizedTokenIndex < 0) {
     lastRecognizedTokenIndex = 0
@@ -162,7 +219,7 @@ export const computeSpeechRecognitionTokenIndex = (
     // Strategy 1: Exact phrase match (k words)
     for (let i = 0; i <= reference_tokens.length - k; i++) {
       const refSlice = reference_tokens.slice(i, i + k)
-      const refPhrase = refSlice.map(t => t.value).join(' ').toLowerCase()
+      const refPhrase = normalizeForMatching(refSlice.map(t => t.value).join(' '), config)
       if (refPhrase === tailPhrase) {
         // Advance to the end of the matched phrase (not the start)
         return refSlice[k - 1].index
@@ -172,7 +229,7 @@ export const computeSpeechRecognitionTokenIndex = (
     // Strategy 2: Contains (lenient) phrase match
     for (let i = 0; i <= reference_tokens.length - k; i++) {
       const refSlice = reference_tokens.slice(i, i + k)
-      const refPhrase = refSlice.map(t => t.value).join(' ').toLowerCase()
+      const refPhrase = normalizeForMatching(refSlice.map(t => t.value).join(' '), config)
       if (refPhrase.includes(tailPhrase) || tailPhrase.includes(refPhrase)) {
         return refSlice[k - 1].index
       }
@@ -184,14 +241,15 @@ export const computeSpeechRecognitionTokenIndex = (
   const scores: { distance: number; index: number; similarity: number }[] = []
 
   for (let i = 0; i <= reference_tokens.length; i++) {
-    const reference_substring = reference_tokens
-      .slice(0, i)
-      .reduce(
-        (accumulator, currentToken) => accumulator + " " + currentToken.value,
-        "",
-      )
-      .replace(/\s+/, " ")
-      .trim()
+    const reference_substring = normalizeForMatching(
+      reference_tokens
+        .slice(0, i)
+        .reduce(
+          (accumulator, currentToken) => accumulator + " " + currentToken.value,
+          "",
+        ),
+      config
+    )
     
     if (reference_substring.length > 0) {
       const distance = levenshteinDistance(comparison_string, reference_substring)
@@ -223,14 +281,18 @@ export const computeSpeechRecognitionTokenIndex = (
   }
 
   // Strategy 4: 2-3 word phrase partial matching for better recognition
-  const recognizedWords = comparison_string.toLowerCase().split(/\s+/)
+  const recognizedWords = comparison_string.split(/\s+/)
   
   // Only proceed if we have at least 2 words
   if (recognizedWords.length >= 2) {
     for (let i = 0; i <= reference_tokens.length - recognizedWords.length; i++) {
-      const referenceWords = reference_tokens
-        .slice(i, i + recognizedWords.length)
-        .map(token => token.value.toLowerCase())
+      const referenceWords = normalizeForMatching(
+        reference_tokens
+          .slice(i, i + recognizedWords.length)
+          .map(token => token.value)
+          .join(' '),
+        config
+      ).split(/\s+/)
       
       let matchCount = 0
       for (let j = 0; j < Math.min(recognizedWords.length, referenceWords.length); j++) {
@@ -250,11 +312,16 @@ export const computeSpeechRecognitionTokenIndex = (
 
   // Strategy 5: strict next-word progression (single word) — only if it matches the immediate next token
   if (recognized_tokens.length >= 1) {
-    const nextRefIndex = lastRecognizedTokenIndex + 1
-    const nextRefToken = reference.find(t => t.index === nextRefIndex)
-    const spoken = recognized_tokens[recognized_tokens.length - 1].value.toLowerCase()
-    if (nextRefToken && nextRefToken.value.toLowerCase() === spoken) {
+    const spoken = normalizeForMatching(recognized_tokens[recognized_tokens.length - 1].value, config)
+    if (nextRefToken && normalizeForMatching(nextRefToken.value, config) === spoken) {
       return nextRefIndex
+    }
+    // For interim, highlight partial of next word
+    if (isInterim && nextRefToken) {
+      const ref = normalizeForMatching(nextRefToken.value, config)
+      if (ref.startsWith(spoken) || spoken.startsWith(ref)) {
+        return nextRefIndex
+      }
     }
   }
 

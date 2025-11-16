@@ -76,6 +76,7 @@ body {
 .content-area {
   height: calc(100vh - 60px); /* Account for fixed navbar height */
   overflow: hidden;
+  position: relative; /* For marker positioning */
 }
 
 /* NavBar styles */
@@ -204,6 +205,19 @@ div.content {
 
 .interim-transcript {
   color: $yellow;
+}
+
+.current-word {
+  color: $white !important;
+  background-color: rgba(0, 209, 178, 0.18);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 209, 178, 0.25) inset;
+}
+
+.upcoming-word {
+  color: $white;
+  opacity: 0.85;
+  text-shadow: 0 0 6px rgba(0, 209, 178, 0.25);
 }
 
 .content > span:hover {
@@ -477,4 +491,92 @@ div.content {
 
 .notification {
   margin-bottom: 1rem;
+}
+
+/* Reading marker styles */
+.reading-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  z-index: 2;
+  cursor: row-resize;
+}
+
+.reading-marker::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px; /* center the 2px line */
+  height: 2px;
+  background: linear-gradient(90deg, transparent, $cyan, transparent);
+  box-shadow: 0 0 10px rgba(0, 209, 178, 0.4);
+}
+
+.reading-marker .marker-position-indicator {
+  position: absolute;
+  left: 8px;
+  top: -14px;
+  padding: 2px 6px;
+  background: rgba(0,0,0,0.6);
+  color: $white;
+  font-size: 0.7rem;
+  border: 1px solid $grey;
+  border-radius: 3px;
+}
+
+.reading-marker.dragging::before {
+  background: linear-gradient(90deg, transparent, $yellow, transparent);
+  box-shadow: 0 0 10px rgba(255, 221, 87, 0.4);
+}
+
+/* Focus band to highlight the current reading line/section */
+.reading-focus-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.00),
+    rgba(255, 255, 255, 0.07),
+    rgba(255, 255, 255, 0.00)
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Upcoming preview panel */
+.upcoming-panel {
+  position: absolute;
+  right: 12px;
+  top: 12%;
+  width: clamp(220px, 28vw, 380px);
+  max-height: 60%;
+  overflow: hidden;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.35));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  z-index: 3;
+}
+
+.upcoming-panel .upcoming-title {
+  color: $grey;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.upcoming-panel .upcoming-body {
+  color: $white;
+  opacity: 0.9;
+  line-height: 1.35;
+  font-size: 0.85em;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

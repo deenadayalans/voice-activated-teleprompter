@@ -8,7 +8,7 @@ export const AccentStatus = () => {
   const status = useAppSelector(selectStatus)
 
   useEffect(() => {
-    if (status === 'listening') {
+    if (status === 'started') {
       setIsVisible(true)
       
       // Simulate accent detection updates

@@ -2,12 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { escape } from "html-escaper"
 import { useAppDispatch, useAppSelector } from "../../app/hooks"
 import { setContent, setFinalTranscriptIndex, setInterimTranscriptIndex } from "./contentSlice"
+import { AutoSaveManager } from "../../lib/auto-save"
 
 import {
   selectStatus,
   selectHorizontallyFlipped,
   selectVerticallyFlipped,
   selectMargin,
+  selectFontSize,
   selectOpacity,
   selectScrollOffset,
 } from "../navbar/navbarSlice"
@@ -24,6 +26,7 @@ export const Content = () => {
 
   const status = useAppSelector(selectStatus)
   const margin = useAppSelector(selectMargin)
+  const fontSize = useAppSelector(selectFontSize)
   const opacity = useAppSelector(selectOpacity)
   const scrollOffset = useAppSelector(selectScrollOffset)
   const horizontallyFlipped = useAppSelector(selectHorizontallyFlipped)
@@ -42,7 +45,7 @@ export const Content = () => {
   const [dragStartPosition, setDragStartPosition] = useState(0)
 
     const style = {
-      fontSize: `140px`, // Larger font size for better readability
+      fontSize: `${fontSize}px`,
       padding: `0 ${margin}px`,
       marginLeft: `80px`, // Move text to the right to avoid marker overlap
     }
@@ -54,6 +57,8 @@ export const Content = () => {
   const maxScrollReached = useRef<number>(0)
   const isUserScrolling = useRef<boolean>(false)
   const userScrollTimeout = useRef<NodeJS.Timeout | null>(null)
+  const UPCOMING_WINDOW_TOKENS = 14
+  const autoSaveRef = useRef<AutoSaveManager | null>(null)
   // Linear scroll animation refs
   const animFrameRef = useRef<number | null>(null)
   const animTargetRef = useRef<number>(0)
@@ -131,6 +136,36 @@ export const Content = () => {
     lastScrollTop.current = 0
     maxScrollReached.current = 0
     isUserScrolling.current = false
+  }, [rawText])
+
+  // Auto-save: load on mount if available, then start periodic saving
+  useEffect(() => {
+    const manager = new AutoSaveManager()
+    autoSaveRef.current = manager
+
+    try {
+      const saved = manager.load()
+      const isPlaceholder = rawText === 'Click on the "Edit" button and paste your content here...'
+      if (saved && saved.content && isPlaceholder) {
+        dispatch(setContent(saved.content))
+      }
+    } catch {}
+
+    manager.start(rawText)
+
+    return () => {
+      manager.destroy()
+      autoSaveRef.current = null
+    }
+  // run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Update auto-save buffer when content changes
+  useEffect(() => {
+    if (autoSaveRef.current) {
+      autoSaveRef.current.updateContent(rawText)
+    }
   }, [rawText])
 
   // Track manual scrolling to allow user control
@@ -351,10 +386,53 @@ export const Content = () => {
           }}
           title="Click any word to skip to it. Use arrow keys: → next word, ↓ next sentence, ↑ next paragraph, Home/End for start/end"
         >
+          {/* Focus band to emphasize current reading section */}
+          <div
+            className="reading-focus-band"
+            style={{
+              top: `${markerPosition}%`,
+              height: `${Math.max(1.8 * fontSize, 36)}px`,
+            }}
+            aria-hidden="true"
+          />
+
+          {/* Upcoming text preview panel */}
+          <div className="upcoming-panel" aria-hidden="true">
+            <div className="upcoming-title">Next up</div>
+            <div className="upcoming-body">
+              {(() => {
+                const activeIndex = Math.max(finalTranscriptIndex, interimTranscriptIndex)
+                const upcoming = textElements
+                  .filter(el => el.type === "TOKEN" && el.index > activeIndex)
+                  .slice(0, Math.max(UPCOMING_WINDOW_TOKENS * 2, 24))
+                  .map(t => t.value)
+                  .join(" ")
+                return upcoming || "—"
+              })()}
+            </div>
+          </div>
+
           {textElements.map((textElement) => {
             const activeIndex = Math.max(finalTranscriptIndex, interimTranscriptIndex)
             const isActive = textElement.index === activeIndex
             const itemProps = isActive ? { ref: lastRef } : {}
+            const isUpcoming =
+              textElement.index > activeIndex &&
+              textElement.index <= activeIndex + UPCOMING_WINDOW_TOKENS
+
+            let className: string
+            if (textElement.index <= finalTranscriptIndex) {
+              className = "final-transcript"
+            } else if (isActive) {
+              className = "current-word"
+            } else if (textElement.index <= interimTranscriptIndex) {
+              className = "interim-transcript"
+            } else if (isUpcoming) {
+              className = "upcoming-word"
+            } else {
+              className = "has-text-white"
+            }
+
             return (
               <span
                 key={textElement.index}
@@ -367,13 +445,7 @@ export const Content = () => {
                   dispatch(setInterimTranscriptIndex(textElement.index))
                   console.log(`Skipped to word ${textElement.index}: "${textElement.value}"`)
                 }}
-                className={
-                  textElement.index <= finalTranscriptIndex
-                    ? "final-transcript"
-                    : textElement.index <= interimTranscriptIndex
-                      ? "interim-transcript"
-                      : "has-text-white"
-                }
+                className={className}
                 {...itemProps}
                 dangerouslySetInnerHTML={{
                   __html: escape(textElement.value).replace(/\n/g, "<br>"),
